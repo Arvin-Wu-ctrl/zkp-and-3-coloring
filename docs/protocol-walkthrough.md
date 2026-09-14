@@ -2,7 +2,7 @@ The structure of the [procedure](#procedure) is best understood knowing what it 
 
 # Motivations of a Zero-Knowledge Proof
 
-A zero knowledge proof (ZKP) in general is an interactive process that proves a certain statement to be true while not revealing any information that was not already publicly available in the beginning.
+The zero knowledge proof (ZKP) process in this project is an interactive process that proves a certain statement to be true while not revealing any information that was not already publicly available in the beginning.
 
 A ZKP is done between 2 parties: a prover and a verifier, where the prover attempts to convince the verifier that some statement is true.
 
@@ -49,7 +49,7 @@ In the problem of graph 3-colorability, each node is assigned one of three color
   
   - That also means that, by knowing 1 valid coloring, you can easily produce 5 more different, but nonetheless valid colorings.
 
-- Fact 2: If a graph is not valid, then there must be at least one pair of connected nodes with the same color[^1].
+- Fact 2: If a coloring is not valid, then there must be at least one pair of connected nodes with the same color[^1].
 
 # Procedure
 
@@ -65,9 +65,9 @@ The explanation largely derive from videos on YouTube by Numberphile[^2] and Pol
 
 ## Color Permutation
 
-The prover permutes the 3 colors to obtain a new graph
+The prover permutes the 3 color labels to obtain a new coloring of the same graph.
 
-- Note that the new graph is also [guaranteed](#graph-3-coloring-problem) to be valid
+- Note that the new coloring is also [guaranteed](#graph-3-coloring-problem) to be valid
 
 - This is done so that the colors obtained from one round cannot be compared to colors from another round to get new knowledge of the hidden coloring. (see [Confidence](#confidence) below for reason for doing multiple rounds, and [Why is it Zero-Knowledge](#why-is-it-zero-knowledge) for why this is necessary)
 
@@ -79,7 +79,13 @@ After committing…
 
 - The colors cannot be changed.
 
-- The verifier cannot see any of the color just yet, so it is zero-knowledge.
+- The verifier cannot see any of the color just yet.
+
+- In this project, commitments are made using SHA-256 together with a random nonce. For each node, the prover hashes the color with a random nonce, for instance:
+
+`SHA256(color || nonce)`
+
+When an edge is opened, the prover reveals the color and nonce for those two nodes, and the verifier hashes them again to check that they match the original commitments.
 
 > The commitment is done via a [commitment scheme](https://en.wikipedia.org/wiki/Commitment_scheme), which guarantees the aforementioned properties without relying on any authority figures.
 
@@ -93,7 +99,7 @@ The verifier choose an edge to be tested (which is the same as choosing two conn
 
 ## Open Edge
 
-The chosen edge is then revealed by the prover, letting the verifier see the two colors.
+The chosen edge is then revealed by the prover, letting the verifier see the two colors and nonces.
 
 ## Verify Edge
 
@@ -103,7 +109,7 @@ The verifier check if the colors are the same.
 
 - If the colors are different, then the prover may have a valid coloring, or they may not have it and have just gotten lucky that the verifier did not choose the edge with the same color
   
-  - If a graph is not valid, then there must be at least one pair of connected nodes with the same color.
+  - If a coloring is not valid, then there must be at least one pair of connected nodes with the same color.
 
 ## Confidence
 
