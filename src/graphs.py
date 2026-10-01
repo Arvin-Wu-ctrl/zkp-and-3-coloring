@@ -71,75 +71,142 @@ def make_k4():
     return nx.complete_graph(4)
 
 
-def draw_graph(graph, title):
-    positions = nx.spring_layout(graph, seed=7)
+def draw_graph(
+    graph,
+    title,
+    show_labels=None,
+    save_path=None,
+    positions=None,
+):
+    """Draw an uncolored graph and optionally save a 300 DPI image."""
+    node_count = graph.number_of_nodes()
+    show_labels = node_count <= 30 if show_labels is None else show_labels
+    node_size = max(45, min(600, 16000 / max(node_count, 1)))
+    if positions is None:
+        positions = nx.spring_layout(
+            graph,
+            seed=7,
+            k=2 / max(node_count, 1) ** 0.5,
+            iterations=150,
+        )
 
-    nx.draw(
+    figure, axis = plt.subplots(figsize=(10, 8))
+    nx.draw_networkx_edges(
         graph,
         positions,
-        with_labels=True,
-        node_color="#65c3ba",
-        node_size=1200,
-        font_size=12,
+        ax=axis,
         edge_color="#555555",
+        width=0.7,
+        alpha=0.25,
     )
+    nx.draw_networkx_nodes(
+        graph,
+        positions,
+        ax=axis,
+        node_color="#8a8a8a",
+        node_size=node_size,
+        edgecolors="white",
+        linewidths=0.5,
+    )
+    if show_labels:
+        nx.draw_networkx_labels(graph, positions, ax=axis, font_size=8)
 
-    plt.title(title)
+    axis.set_title(title, fontsize=16)
+    axis.set_axis_off()
+    figure.tight_layout()
+    if save_path is not None:
+        figure.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
+    return figure
 
 
-def draw_colored_graph(graph: Graph, coloring: typing.List[int], title: str, 
-    colors: list = ["#118a80", "#7661bc", "#c58b20"], 
-    default_color: str = "#bbbbbb"):
+def draw_colored_graph(
+    graph: Graph,
+    coloring: typing.List[int],
+    title: str,
+    colors=None,
+    default_color: str = "#bbbbbb",
+    show_labels=None,
+    save_path=None,
+    positions=None,
+):
+    """Draw a colored graph with a layout that remains readable at larger sizes.
+
+    Labels are hidden automatically for graphs with more than 30 vertices.
+    Set ``show_labels`` explicitly to override that behavior. If ``save_path``
+    is provided, a 300 DPI copy suitable for a report is saved as well.
     """
-    Draw the colored graph in `NetworkX.circular_layout` and show it with 
-    `mathplotlib.pyplot`.
-    # Parameters
-    - graph : networkx.Graph
-        - A NetworkX Graph with the node value being the index to locate the 
-        color in the `coloring` argument.
-    - coloring : list[int]
-        - A list consists of integer representing the colors with integers. 
-        - The list is indexed by the node values.
-        - A color represented by integer `n` is displayed with the `n`th item 
-        of the `colors` argument.
-    - title : str
-    - colors : list[str]
-        - A list consists of the hexadecimal representation of the displayed 
-        colors.
-    - default_color : str
-        - The hexadecimal representation of the color to be used for color 
-        indices beyond the list given in the `colors` argument.
-    """
-    
-    # positions = nx.spring_layout(graph, seed=7)
-    positions = nx.circular_layout(graph)
+    if colors is None:
+        colors = ["#118a80", "#7661bc", "#c58b20"]
 
-    node_color = []
+    node_count = graph.number_of_nodes()
+    show_labels = node_count <= 30 if show_labels is None else show_labels
+    node_size = max(45, min(600, 16000 / max(node_count, 1)))
+    if positions is None:
+        positions = nx.spring_layout(
+            graph,
+            seed=7,
+            k=2 / max(node_count, 1) ** 0.5,
+            iterations=150,
+        )
+
+    node_colors = []
     for node in graph.nodes:
         color_index = coloring[node] if 0 <= node < len(coloring) else -1
         if 0 <= color_index < len(colors):
-            node_color.append(colors[color_index])
+            node_colors.append(colors[color_index])
         else:
-            node_color.append(default_color)
+            node_colors.append(default_color)
 
-    nx.draw(
+    figure, axis = plt.subplots(figsize=(10, 8))
+    nx.draw_networkx_edges(
         graph,
         positions,
-        with_labels=True,
-        node_color=node_color,
-        node_size=600,
-        font_size=12,
+        ax=axis,
         edge_color="#555555",
+        width=0.7,
+        alpha=0.25,
     )
+    nx.draw_networkx_nodes(
+        graph,
+        positions,
+        ax=axis,
+        node_color=node_colors,
+        node_size=node_size,
+        edgecolors="white",
+        linewidths=0.5,
+    )
+    if show_labels:
+        nx.draw_networkx_labels(
+            graph,
+            positions,
+            ax=axis,
+            font_size=8 if node_count > 15 else 11,
+        )
 
-    plt.title(title)
+    legend_handles = [
+        plt.Line2D(
+            [], [], marker="o", linestyle="", color=color,
+            label=f"Color {index}", markersize=8,
+        )
+        for index, color in enumerate(colors)
+        if index in coloring
+    ]
+    if legend_handles:
+        axis.legend(handles=legend_handles, frameon=False, loc="upper right")
+
+    axis.set_title(title, fontsize=16)
+    axis.set_axis_off()
+    figure.tight_layout()
+    if save_path is not None:
+        figure.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
+    return figure
 
 
 def generate_3_colorable_graph(
-    num_vertices, edge_probability: float = 1, 
-    seed=None) -> typing.Tuple[Graph, list]:
+    num_vertices, edge_probability: float = 1,
+    seed=None, visualize: bool = False) -> typing.Tuple[Graph, list]:
     """Generate a 3-colorable graph.
     # Parameters
     - num_vertices : int
@@ -156,6 +223,8 @@ def generate_3_colorable_graph(
         - The seed used to initialize the random number generator.
         - If a is omitted or None, the current system time is used. 
         See `random.seed()` for the behavior.
+    - visualize : bool = False
+        - Display the generated graph with its coloring when True.
 
     # Return
     - (graph, coloring) : tuple
@@ -170,12 +239,17 @@ def generate_3_colorable_graph(
 
     if num_vertices < 0:
         raise ValueError("Number of vertices cannot be negative.")
+    if not 0 <= edge_probability <= 1:
+        raise ValueError("Edge probability must be between 0 and 1.")
     
     _random = random.Random(seed)
     graph: Graph = nx.complete_graph(min(num_vertices, 3))
     
     if num_vertices <= 3:
-        return graph, list(range(num_vertices))
+        coloring = list(range(num_vertices))
+        if visualize:
+            draw_colored_graph(graph, coloring, "Generated 3-Colorable Graph")
+        return graph, coloring
     
     coloring = list(range(num_vertices)) # index: node value
     valid_neighbors_by_color = ([1, 2], [0, 2], [0, 1]) # index: color number
@@ -199,7 +273,37 @@ def generate_3_colorable_graph(
             graph.add_edge(node, 
                 _random.choice(valid_neighbors_by_color[color]))
 
+    if visualize:
+        draw_colored_graph(graph, coloring, "Generated 3-Colorable Graph")
+
     return graph, coloring
+
+
+def save_graph_example(graph, coloring, name, directory="examples"):
+    """Save a generated graph and its private coloring as separate JSON files."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+
+    graph_path = directory / f"{name}.json"
+    coloring_path = directory / f"{name}_coloring.json"
+
+    graph_data = {
+        "vertices": list(graph.nodes),
+        "edges": [list(edge) for edge in graph.edges],
+    }
+    coloring_data = {
+        "colors": {str(node): coloring[node] for node in graph.nodes},
+    }
+
+    with graph_path.open("w", encoding="utf-8") as graph_file:
+        json.dump(graph_data, graph_file, indent=2)
+        graph_file.write("\n")
+
+    with coloring_path.open("w", encoding="utf-8") as coloring_file:
+        json.dump(coloring_data, coloring_file, indent=2)
+        coloring_file.write("\n")
+
+    return graph_path, coloring_path
 
 
 def _test_load_graph():
