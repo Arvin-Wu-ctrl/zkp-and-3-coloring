@@ -6,6 +6,8 @@ import networkx as nx
 import random
 import typing
 
+from copy import deepcopy
+
 type Graph = nx.Graph
 
 def load_graph_from_data(data):
@@ -306,7 +308,167 @@ def save_graph_example(graph, coloring, name, directory="examples"):
     return graph_path, coloring_path
 
 
-def _test_load_graph():
+def generate_corrupted_witness(orig_witness: Graph, bad_edge_ratio: float=0,
+    tolerance: float=None, seed: int=None, 
+    visualize: bool = False) -> Graph:
+    """
+    Create a witness graph with invalid edges by adding new nodes or new 
+    connections between same color nodes.
+
+    The ratio of invalid edges 
+    to total edges be within the range of `ratio + tolerance`.
+
+    Do not guarantee that the resulting graph is not 3-colorable.
+    # Parameter
+    - orig_witness : NetworkX.Graph
+        - The witness graph of of the original graph.
+        - All nodes must have the attribute 'color'.
+    - bad_edge_ratio : float
+        - The ratio of invalid edges / total edges
+        - The returned graph is guaranteed to have at least 1 invalid edge even 
+        if this ratio is set to 0.
+    - tolerance : float
+        - The acceptable variance of the actual bad edge ratio from the given 
+        `bad_edge_ratio`.
+        - Must be nonzero
+    - seed : float
+        - For `random.Random` from the built-in `random` library.
+    - visualize : bool = False
+        - Display the generated graph with its coloring when True.
+    #
+    """
+
+    if not (0 <= bad_edge_ratio < 1):
+        raise ValueError(
+            "Bad edge ratio must be between 0 and 1, and not 1.")
+
+    if orig_witness.number_of_edges() == 0:
+        raise ValueError("The graph must have at least 1 edge.")
+    for node in orig_witness.nodes():
+        if 'color' not in orig_witness.nodes[node]:
+            raise ValueError(
+                "The nodes of the graph must have the attribute 'color'")
+        if not (0 <= orig_witness.nodes[node]['color'] < 3):
+            raise ValueError(
+                "All nodes must have a color value of 0, 1, or 2"
+            )
+
+    if tolerance is None:
+        tolerance = 1 / orig_witness.number_of_edges()
+    if not (0 < tolerance <= 1):
+        raise ValueError("Tolerance must be between 0 and 1, and not 0.")
+    # end of input validation
+
+    # 0 ratio
+    # 0 edges
+    # connect to existing edges
+
+    witness = deepcopy(orig_witness)    
+    _random = random.Random(seed)
+
+    bad_edges = number_of_bad_edges(witness)
+    nodes = list(witness.nodes.keys())
+    current_ratio = bad_edges / witness.number_of_edges()
+
+    # guarantee an invalid edge is added
+    if bad_edges == 0:
+        current_ratio = -2
+    while not (abs(current_ratio - bad_edge_ratio) <= tolerance):
+        parent = _random.choice(nodes)
+        leaf = witness.number_of_nodes() # nodes are 0-indexed
+        witness.add_node(leaf)
+
+        if current_ratio < bad_edge_ratio:
+            witness.nodes[leaf]['color'] = witness.nodes[parent]['color']
+
+        elif current_ratio > bad_edge_ratio:
+            witness.nodes[leaf]['color'] = (witness.nodes[parent]['color'] + 1) % 3
+        
+        nodes.append(leaf)
+        witness.add_edge(parent, leaf)
+
+        bad_edges += 1
+
+        current_ratio = bad_edges / witness.number_of_edges()
+
+
+    if visualize:
+        _, coloring = color_separated(witness)
+        draw_colored_graph(witness, coloring, "Corrupted Graph")
+
+    return witness
+
+
+def witness_graph(graph: Graph, coloring: list) -> Graph:
+    """
+    Generate a graph with the 'color' attribute set for every node.
+    # Parameter
+    - graph : NetworkX.Graph
+        - The argument is unchanged
+    - coloring : list[int]
+        - The list of colors indexed by the node values.
+    # Return
+    - NetworkX.Graph
+        - A new graph with the 'color' attribute set for every node."""
+    if graph.number_of_nodes() != len(coloring):
+        raise ValueError(
+            "The number of nodes in the graph and "
+            "the number of values in coloring must be the same.")
+    witness = deepcopy(graph)
+    nx.set_node_attributes(
+        witness,
+        {node: coloring[node] for node in graph.nodes},
+        "color",
+    )
+    return witness
+
+
+def number_of_bad_edges(graph: Graph) -> int:
+    """
+    Count the number of bad edges (where the two nodes have the same color).
+    # Parameter
+    - graph : NetworkX.Graph
+        - All nodes of the graph must have the 'color' attribute set.
+    # Return
+    - int
+        - The number of bad edges.
+    """
+    for node in graph.nodes:
+        if 'color' not in graph.nodes[node]:
+            raise ValueError(
+                "All nodes of the graph must have the 'color' attribute.")
+    # end of input validation
+
+    bad_edges = 0
+    for u, v in graph.edges:
+        if graph.nodes[u] == graph.nodes[v]:
+            bad_edges += 1
+    return bad_edges
+
+
+def color_separated(witness: Graph) -> typing.Tuple[Graph, list[int]]:
+    """
+    Returns the uncolored graph and list of colors separately
+
+    Useful for getting a public graph without the witness.
+    # Parameter
+    - witness : NetworkX.Graph
+        - All nodes of the graph must have the 'color' attribute set.
+    # Return
+    - Graph
+        - The graph without the 'color' attributes.
+    - list[int]
+        - A list of the values of the 'color' attributes"""
+    coloring = [0] * witness.number_of_nodes()
+    for node in witness.nodes:
+        coloring[node] = witness.nodes[node]['color']
+
+    uncolored_graph = nx.Graph()
+    uncolored_graph.add_edges_from(witness.edges)
+    return uncolored_graph, coloring
+
+
+def _demo_load_graph():
     triangle = load_graph("examples/triangle.json")
     k4 = load_graph("examples/k4.json")
 
@@ -319,11 +481,19 @@ def _test_load_graph():
     draw_graph(k4, "K4")
 
 
-def _test_generate_3_colorable_graph():
+def _demo_generate_3_colorable_graph():
     generated, coloring = generate_3_colorable_graph(20, 0.5, 1)
     print(f"generated valid coloring: {coloring}")
     draw_colored_graph(generated, coloring, "Generated Colored Graph")
 
+def _demo_generate_corrupted_graph():
+    valid_graph, valid_coloring = generate_3_colorable_graph(
+        20, 0.5, 1)
+    witness = witness_graph(valid_graph, valid_coloring)
+    generate_corrupted_witness(witness, 0, .1, seed=11, visualize=True)
+    generate_corrupted_witness(witness, 0.5, .1, seed=11, visualize=True)
+
 if __name__ == "__main__":
-    _test_load_graph()
-    _test_generate_3_colorable_graph()
+    # _demo_load_graph()
+    # _demo_generate_3_colorable_graph()
+    _demo_generate_corrupted_graph()

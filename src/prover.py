@@ -21,8 +21,8 @@ class Prover:
 
         if self._witness is None:
             self._solve_three_color(search_budget)
-        elif not self._check_coloring():
-            self._solve_three_color(search_budget)
+        # elif not self._check_coloring():
+        #     self._solve_three_color(search_budget)
 
 
     def _node_colors(self):
