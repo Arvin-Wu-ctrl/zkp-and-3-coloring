@@ -3,7 +3,6 @@ import secrets
 
 import networkx as nx
 
-from src.colorings import relabel_coloring
 from src.commitments import create_commitment
 
 
@@ -11,16 +10,18 @@ class Prover:
 
     def __init__(
             self, graph: nx.Graph, witness: nx.Graph = None,
-            search_budget: int = 10, seed=None
+            search_budget: int = 10, seed = 0
         ):
         self._graph = graph.copy()
         self._witness = None if witness is None else witness.copy()
         self._seed = seed
-        self._random = random.SystemRandom() if seed is None else random.Random(seed)
+        self._random = random.Random(seed)
         self._current_commitments = {}
         self._current_permutation = {}
 
         if self._witness is None:
+            self._solve_three_color(search_budget)
+        elif not self._check_coloring():
             self._solve_three_color(search_budget)
 
 
@@ -39,8 +40,9 @@ class Prover:
         """
         original_colors = self._node_colors()
         permutation = self._random.sample([0, 1, 2], 3)
-        self._current_permutation = dict(enumerate(permutation))
-        round_colors = relabel_coloring(original_colors, self._current_permutation)
+        self._current_permutation = {
+            original: permuted for original, permuted in enumerate(permutation)
+        }
         self._current_commitments = {}
 
         commitment_graph = nx.Graph()
@@ -52,15 +54,19 @@ class Prover:
             if original_color not in (0, 1, 2):
                 raise ValueError(f"Node {node!r} does not have a valid 3-coloring.")
 
-            hidden_color = round_colors[node]
+            hidden_color = self._current_permutation[original_color]
             nonce = secrets.randbits(128)
             commitment = create_commitment(hidden_color, nonce)
             self._current_commitments[node] = {
                 "color": hidden_color,
                 "nonce": nonce,
                 "commitment": commitment,
+                "original_color": original_color,
             }
             commitment_graph.nodes[node]["commitment"] = commitment
+            commitment_graph.nodes[node]["color"] = hidden_color
+            commitment_graph.nodes[node]["nonce"] = nonce
+            commitment_graph.nodes[node]["original_color"] = original_color
 
         return commitment_graph
 

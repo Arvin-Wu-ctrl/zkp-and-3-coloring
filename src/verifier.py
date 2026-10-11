@@ -7,10 +7,10 @@ from src.commitments import check_opening
 
 class Verifier:
 
-    def __init__(self, graph, seed=None):
+    def __init__(self, graph, seed: int = 0):
         self._graph = graph
         self._seed = seed
-        self._random = random.SystemRandom() if seed is None else random.Random(seed)
+        self._random = random.Random(seed)
         self._pending_commitments = None
         self._pending_edge = None
 
