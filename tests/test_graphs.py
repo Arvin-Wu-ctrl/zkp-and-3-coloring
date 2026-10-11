@@ -3,11 +3,16 @@ from pathlib import Path
 
 import networkx as nx
 import pytest
+from copy import deepcopy
 
 from src.graphs import (
+    color_separated,
     generate_3_colorable_graph,
+    generate_corrupted_witness,
+    witness_graph,
     load_graph,
     load_graph_from_data,
+    number_of_bad_edges,
     save_graph_example,
 )
 from src.prover import Prover
@@ -110,3 +115,59 @@ def test_save_graph_example_keeps_graph_and_coloring_separate(tmp_path):
     assert saved_coloring["colors"] == {
         str(node): coloring[node] for node in graph.nodes
     }
+
+
+########## generate_corrupted_witness ##########
+
+@pytest.mark.parametrize("bad_edge_ratio, tolerance", [
+    (0, .1),
+    (.5, .000001),
+])
+def test_generate_corrupted_witness_with_invalid_coloring(bad_edge_ratio, tolerance):
+    valid_graph, coloring = generate_3_colorable_graph(12, 0.3, seed=11)
+    valid_witness = witness_graph(valid_graph, coloring)
+
+    invalid_witness = generate_corrupted_witness(
+        valid_witness, 
+        bad_edge_ratio=bad_edge_ratio, 
+        tolerance=tolerance,
+        seed=11
+    )
+    invalid_graph, invalid_coloring = color_separated(invalid_witness)
+
+    assert nx.is_connected(invalid_witness)
+    assert Prover(invalid_graph, invalid_witness)._check_coloring() is False
+
+
+@pytest.mark.parametrize("expected_ratio, tolerance", [(0.5, 0.1)])
+def test_generate_corrupted_witness_control_bad_edge_ratio(expected_ratio, tolerance):
+    valid_graph, coloring = generate_3_colorable_graph(12, 0.3, seed=11)
+    valid_witness = witness_graph(valid_graph, coloring)
+
+    invalid_witness = generate_corrupted_witness(valid_witness, expected_ratio, seed=11)
+
+    actual_ratio = number_of_bad_edges(invalid_witness) / invalid_witness.number_of_edges()
+    assert abs(actual_ratio - expected_ratio) <= tolerance
+
+
+def test_generate_corrupted_witness_is_seeded():
+    valid_graph, coloring = generate_3_colorable_graph(12, 0.3, seed=11)
+    valid_witness = witness_graph(valid_graph, coloring)
+
+    witness1 = generate_corrupted_witness(valid_witness, 0.5, seed=11)
+    witness2 = generate_corrupted_witness(valid_witness, 0.5, seed=11)
+    witness3 = generate_corrupted_witness(valid_witness, 0.5, seed=12)
+
+    assert nx.utils.graphs_equal(witness1, witness2)
+    assert not nx.utils.graphs_equal(witness1, witness3)
+
+
+def test_generate_corrupted_witness_not_change_original_graph():
+    valid_graph, coloring = generate_3_colorable_graph(12, 0.3, seed=11)
+    valid_witness = witness_graph(valid_graph, coloring)
+    original = deepcopy(valid_witness)
+
+    invalid_witness = generate_corrupted_witness(valid_witness, 0.5, seed=11)
+
+    assert nx.utils.graphs_equal(original, valid_witness)
+
