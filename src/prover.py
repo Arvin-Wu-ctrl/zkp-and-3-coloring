@@ -64,9 +64,8 @@ class Prover:
                 "original_color": original_color,
             }
             commitment_graph.nodes[node]["commitment"] = commitment
-            commitment_graph.nodes[node]["color"] = hidden_color
-            commitment_graph.nodes[node]["nonce"] = nonce
-            commitment_graph.nodes[node]["original_color"] = original_color
+
+            """Reveal only the hash, not the color or nonce."""
 
         return commitment_graph
 
