@@ -8,7 +8,9 @@ from copy import deepcopy
 from src.graphs import (
     color_separated,
     generate_3_colorable_graph,
+    generate_3_colorable_witness_with_edge_count,
     generate_corrupted_witness,
+    generate_corrupted_witness_with_edge_counts,
     witness_graph,
     load_graph,
     load_graph_from_data,
@@ -171,3 +173,38 @@ def test_generate_corrupted_witness_not_change_original_graph():
 
     assert nx.utils.graphs_equal(original, valid_witness)
 
+########## generate_3_colorable_witness_with_edge_count ##########
+
+@pytest.mark.parametrize("num_vertices, num_edges", [
+    (2, 1),
+    (3, 3),
+    (10, 9),
+    (10, 20),
+    (20, 100),
+])
+def test_generate_3_colorable_witness_with_edge_count_valid_coloring(
+        num_vertices, num_edges):
+
+    graph = generate_3_colorable_witness_with_edge_count(
+        num_vertices, num_edges, seed=11)
+
+    assert graph.number_of_nodes() == num_vertices
+    assert nx.is_connected(graph)
+    assert number_of_bad_edges(graph) == 0
+
+def test_generate_witness_with_edge_count_is_reproducible_with_seed():
+    graph1 = generate_3_colorable_witness_with_edge_count(13, 12, seed=11)
+    graph2 = generate_3_colorable_witness_with_edge_count(13, 12, seed=11)
+    assert set(graph1.edges) == set(graph2.edges)
+
+@pytest.mark.parametrize("num_vertices, num_edges", [
+    (2, 1),
+    (3, 3),
+    (10, 9),
+    (10, 20),
+])
+def test_generate_witness_with_edge_count_correct_number_of_edges(
+    num_vertices, num_edges):
+    graph = generate_3_colorable_witness_with_edge_count(
+        num_vertices, num_edges, seed=11)
+    assert graph.number_of_edges() == num_edges

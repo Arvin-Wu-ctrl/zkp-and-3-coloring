@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import random
 import typing
+import itertools
+import math
 
 from copy import deepcopy
+from collections import namedtuple
 
 type Graph = nx.Graph
 
@@ -131,6 +134,7 @@ def draw_colored_graph(
     show_labels=None,
     save_path=None,
     positions=None,
+    show: bool=True
 ):
     """Draw a colored graph with a layout that remains readable at larger sizes.
 
@@ -202,7 +206,8 @@ def draw_colored_graph(
     figure.tight_layout()
     if save_path is not None:
         figure.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()
+    if show:
+        plt.show()
     return figure
 
 
@@ -468,6 +473,159 @@ def color_separated(witness: Graph) -> typing.Tuple[Graph, list[int]]:
     return uncolored_graph, coloring
 
 
+class ColorSeparated(namedtuple("ColorSeparated", ("graph", "coloring"))):
+    def __init__(self, witness):
+        super().__init__(*color_separated(witness))
+
+def generate_3_colorable_witness_with_edge_count(
+    num_vertices: int, num_edges: int,
+    seed=None, visualize: bool = False) -> Graph:
+
+    if num_vertices < 1:
+        raise ValueError("Number of vertices must be at least 1.")
+    if num_edges < num_vertices - 1:
+        raise ValueError("Not enough edges to form a connected graph.")
+
+    _random = random.Random(seed)
+    config  = _choose_3_colorable_color_configuration(
+        num_vertices, num_edges, _random)
+    print(config)
+
+    if config is None:
+        raise ValueError(
+            "Number of edges impossible for the specified number of nodes")
+
+    if num_vertices <= 3:
+        graph:Graph = nx.complete_graph(num_vertices)
+        coloring = list(range(num_vertices))
+        if num_edges == 2:
+            graph.remove_edge(0, 1)
+        return witness_graph(graph, coloring)
+
+    c0, c1, c2 = config
+    graph = nx.Graph()
+    graph.add_nodes_from(range(num_vertices))
+    coloring = [0]*c0 + [1]*c1 + [2]*c2
+    _random.shuffle(coloring)
+
+    nodes_by_color = [[], [], []]
+    _ensure_connectedness(
+        num_vertices, _random, graph, coloring, c0, c1, c2, nodes_by_color)
+
+    incomplete_nodes = list(graph.nodes)
+    while graph.number_of_edges() < num_edges:
+        u = _random.choice(incomplete_nodes)
+        # print(u, graph.degree(u))
+        if graph.degree[u] == num_vertices - len(nodes_by_color[coloring[u]]):
+            incomplete_nodes.remove(u)
+        v = random.choice(incomplete_nodes)
+        i = 0
+        while u == v or graph.has_edge(u, v) \
+        or coloring[u] == coloring[v]:
+            v = (v + 1) % num_vertices
+            i += 1
+            if i == 1000:
+                break
+        graph.add_edge(u, v)
+
+    if visualize:
+        draw_colored_graph(graph, coloring, "Generated 3-Colorable Graph")
+        
+    return witness_graph(graph, coloring)
+
+def _ensure_connectedness(
+    num_vertices, _random, graph, coloring, c0, c1, c2, nodes_by_color):
+    for u in range(num_vertices):
+        color = coloring[u]
+        nodes_by_color[color].append(u)
+
+    connected_by_color = [0, 0, 0]
+    if c0 != 0:
+        connected_by_color[0] += 1
+        if c1 != 0:
+            graph.add_edge(nodes_by_color[0][0], nodes_by_color[1][0])
+            connected_by_color[1] += 1
+            if c2 != 0:
+                graph.add_edge(nodes_by_color[1][0], nodes_by_color[2][0])
+                connected_by_color[2] += 1
+        elif c2 != 0:
+            graph.add_edge(nodes_by_color[0][0], nodes_by_color[2][0])
+            connected_by_color[2] += 1
+
+    elif c1 != 0:
+        connected_by_color[1] += 1
+        if c2 != 0:
+            graph.add_edge(nodes_by_color[1][0], nodes_by_color[2][0])
+            connected_by_color[2] += 1
+
+    unconnected = nodes_by_color[0][connected_by_color[0]:] \
+        + nodes_by_color[1][connected_by_color[1]:] \
+        + nodes_by_color[2][connected_by_color[2]:]        
+    for u in unconnected:
+        color = coloring[u]
+
+        possible_neighbors = []
+        for other_color in range(3):
+            if other_color == color:
+                continue
+            connected = connected_by_color[other_color]
+            possible_neighbors += nodes_by_color[other_color][:connected]
+
+        neighbor = _random.choice(possible_neighbors)
+        graph.add_edge(u, neighbor)
+        connected_by_color[color] += 1
+    
+
+def _choose_3_colorable_color_configuration(nodes, edges, _random: random.Random
+) -> typing.Tuple[int, int, int] | None:
+    if nodes <= 0:
+        return None
+    
+    # redundant checks, but bounded
+    if nodes < 9:
+        lattices = list(itertools.product(range(0, nodes + 1), repeat=3))
+        _random.shuffle(lattices)
+
+        for x, y, z in lattices:
+            if not _valid_3_color_configuration(x, y, z, nodes, edges):
+                continue
+            return (x, y, z)
+
+    population = tuple(range(0, nodes + 1))
+    x, y = _random.choices(population, 
+        [1 / len(population)**3] + [abs(1/(nodes/3+.01-n)) for n in population[1:]], k=2)
+
+    argmax = nodes / 3
+    maxima = itertools.product(
+        (math.ceil(argmax), math.floor(argmax)), repeat=3)
+    maxima = set(maxima)
+    z = nodes - x - y
+
+    while (x, y, z) not in maxima:
+        z = nodes - x - y
+        if _valid_3_color_configuration(x, y, z, nodes, edges):
+            return (int(x), int(y), int(z))
+        x = (x + argmax) // 2
+        y = (y + argmax) // 2
+
+    for x, y, z in maxima:
+        if _valid_3_color_configuration(x, y, z, nodes, edges):
+            return (x, y, z)
+
+    return None
+
+def _valid_3_color_configuration(x, y, z, nodes, edges):
+    return x + y + z == nodes \
+        and x*y + y*z + z*x >= edges \
+        and x >= 0 and y >= 0 and z >= 0
+
+
+def generate_corrupted_witness_with_edge_counts(
+    num_vertices: int, total_edges: int, num_invalid_edges: int,
+    seed: int=None, visualize: bool = False) -> Graph:
+    pass
+
+
 def _demo_load_graph():
     triangle = load_graph("examples/triangle.json")
     k4 = load_graph("examples/k4.json")
@@ -493,7 +651,22 @@ def _demo_generate_corrupted_graph():
     generate_corrupted_witness(witness, 0, .1, seed=11, visualize=True)
     generate_corrupted_witness(witness, 0.5, .1, seed=11, visualize=True)
 
+def _demo_generate_3_colorable_witness_with_edge_count():
+    # generate_3_colorable_witness_with_edge_count(8, 5)
+    generate_3_colorable_witness_with_edge_count(20, 100, seed=11, visualize=True)
+    nodes = 100
+    count = [0] * nodes
+    for i in range(100):
+        # _choose_3_colorable_color_configuration(20, 30, random.Random(i))
+        config = _choose_3_colorable_color_configuration(
+            nodes, 30, random.Random(i))
+        for j in config:
+            count[j] += 1
+    print(count)
+
+
 if __name__ == "__main__":
     # _demo_load_graph()
     # _demo_generate_3_colorable_graph()
-    _demo_generate_corrupted_graph()
+    # _demo_generate_corrupted_graph()
+    _demo_generate_3_colorable_witness_with_edge_count()

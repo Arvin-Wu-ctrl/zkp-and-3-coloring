@@ -1,0 +1,92 @@
+{
+  "valid": {
+    "m": 100,
+    "b": 10,
+    "rounds": 10,
+    "transcript": {
+      "accepted": true,
+      "rounds": [
+        {
+          "round": 1,
+          "edge": [
+            16,
+            17
+          ],
+          "passed": true
+        },
+        {
+          "round": 2,
+          "edge": [
+            4,
+            14
+          ],
+          "passed": true
+        },
+        {
+          "round": 3,
+          "edge": [
+            15,
+            9
+          ],
+          "passed": true
+        },
+        {
+          "round": 4,
+          "edge": [
+            0,
+            15
+          ],
+          "passed": true
+        },
+        {
+          "round": 5,
+          "edge": [
+            12,
+            5
+          ],
+          "passed": true
+        },
+        {
+          "round": 6,
+          "edge": [
+            5,
+            9
+          ],
+          "passed": true
+        },
+        {
+          "round": 7,
+          "edge": [
+            5,
+            10
+          ],
+          "passed": true
+        },
+        {
+          "round": 8,
+          "edge": [
+            15,
+            4
+          ],
+          "passed": true
+        },
+        {
+          "round": 9,
+          "edge": [
+            12,
+            17
+          ],
+          "passed": true
+        },
+        {
+          "round": 10,
+          "edge": [
+            5,
+            6
+          ],
+          "passed": true
+        }
+      ]
+    }
+  }
+}
