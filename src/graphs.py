@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import random
 import typing
+import math
 
 from copy import deepcopy
+from collections import namedtuple
 
 type Graph = nx.Graph
 
@@ -132,6 +134,7 @@ def draw_colored_graph(
     show_labels=None,
     save_path=None,
     positions=None,
+    show: bool=True
 ):
     """Draw a colored graph with a layout that remains readable at larger sizes.
 
@@ -203,7 +206,8 @@ def draw_colored_graph(
     figure.tight_layout()
     if save_path is not None:
         figure.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()
+    if show:
+        plt.show()
     return figure
 
 
@@ -688,6 +692,11 @@ def color_separated(witness: Graph) -> typing.Tuple[Graph, list[int]]:
     return uncolored_graph, coloring
 
 
+class ColorSeparated(namedtuple("ColorSeparated", ("graph", "coloring"))):
+    def __init__(self, witness):
+        super().__init__(*color_separated(witness))
+
+
 def _demo_load_graph():
     triangle = load_graph("examples/triangle.json")
     k4 = load_graph("examples/k4.json")
@@ -713,7 +722,9 @@ def _demo_generate_corrupted_graph():
     generate_corrupted_witness(witness, 0, .1, seed=11, visualize=True)
     generate_corrupted_witness(witness, 0.5, .1, seed=11, visualize=True)
 
+
 if __name__ == "__main__":
     # _demo_load_graph()
     # _demo_generate_3_colorable_graph()
+
     _demo_generate_corrupted_graph()

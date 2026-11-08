@@ -5,7 +5,7 @@ from src.prover import Prover
 from src.verifier import Verifier
 
 
-def run_session(graph: nx.Graph, rounds: int, witness: nx.Graph = None):
+def run_session(graph: nx.Graph, rounds: int, witness: nx.Graph = None) -> dict:
     """Run up to ``rounds`` rounds, stopping at the first rejection."""
     if not isinstance(rounds, int) or rounds < 0:
         raise ValueError("Rounds must be a non-negative integer.")

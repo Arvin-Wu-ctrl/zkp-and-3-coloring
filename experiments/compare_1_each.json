@@ -1,0 +1,19 @@
+{
+  "output": "results/compare_1_each-report.json",
+  "sessions": {
+    "honest": {
+      "nodes": 100,
+      "edges": 1000,
+      "bad_edges": 0,
+      "seed": 12,
+      "max_rounds": 100
+    },
+    "corrupted": {
+      "nodes": 100,
+      "edges": 1000,
+      "bad_edges": 100,
+      "seed": 12,
+      "max_rounds": 100
+    }
+  }
+}

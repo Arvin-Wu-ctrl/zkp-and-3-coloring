@@ -361,4 +361,3 @@ def test_generate_corrupted_witness_not_change_original_graph():
     invalid_witness = generate_corrupted_witness(valid_witness, 0.5, seed=11)
 
     assert nx.utils.graphs_equal(original, valid_witness)
-
