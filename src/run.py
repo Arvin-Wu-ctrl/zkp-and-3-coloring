@@ -30,17 +30,27 @@ def main():
     }
 
     for session_name, session_config in sessions.items():
-        params = _setup_session(session_config, graphs)
-        
-        record = run_session(*params)
-        
-        record = record.copy()
-        record.update(session_config)
+        params_list = _session_parameters(session_config, graphs)
 
-        report["sessions"][session_name] = record
+        if len(params_list) == 1:
+            record = _run_session(session_config, params_list[0])
+            report["sessions"][session_name] = record
+            continue
+
+        for i, params in enumerate(params_list):
+            record = _run_session(session_config, params)
+            report["sessions"][f"{session_name}_{i}"] = record
+        
 
     _analyze_sessions(report)
     _save_report(output_path, report)
+
+
+def _run_session(session_config, params) -> dict:
+    record = run_session(*params)
+    record = record.copy()
+    record.update(session_config)
+    return record
 
 
 def _load_graphs(graph_data: dict) -> dict:
@@ -119,15 +129,22 @@ def _analyze_sessions(report):
 
 
 SessionParameters = namedtuple("SessionParameters", 
-    ["graph", "rounds", "witness", "seed"])
-def _setup_session(config: dict, graphs: dict) -> SessionParameters:
+    ["graph", "rounds", "witness", "seeds"])
+def _session_parameters(config: dict, graphs: dict) -> list[SessionParameters]:
     graph_name = config["graph"]
     witness = graphs[graph_name]
     uncolored_graph, coloring = color_separated(witness)
     rounds = config["max_rounds"]
-    seed = config.get("seed", 0)
 
-    return SessionParameters(uncolored_graph, rounds, witness, seed)
+    if "seeds" in config:
+        seeds = config["seeds"]
+    else:
+        seeds = [config.get("seed", 0)]
+
+    return [
+        SessionParameters(uncolored_graph, rounds, witness, seed)
+        for seed in seeds
+    ]
 
 
 if __name__ == "__main__":
