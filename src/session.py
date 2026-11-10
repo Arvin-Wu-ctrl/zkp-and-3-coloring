@@ -5,13 +5,18 @@ from src.prover import Prover
 from src.verifier import Verifier
 
 
-def run_session(graph: nx.Graph, rounds: int, witness: nx.Graph = None) -> dict:
+def run_session(graph: nx.Graph, rounds: int, witness: nx.Graph = None,
+    seed = 0) -> dict:
     """Run up to ``rounds`` rounds, stopping at the first rejection."""
     if not isinstance(rounds, int) or rounds < 0:
         raise ValueError("Rounds must be a non-negative integer.")
 
-    prover = Prover(deepcopy(graph), witness)
-    verifier = Verifier(deepcopy(graph))
+    # arbitrary
+    prover_seed = hash("Prover") * seed
+    verifier_seed = hash("Verifier") * seed
+    
+    prover = Prover(deepcopy(graph), witness, seed=prover_seed)
+    verifier = Verifier(deepcopy(graph), seed=verifier_seed)
 
     # small history, what verifier checked each round
     records = []
