@@ -1,0 +1,16 @@
+{
+  "graphs": {
+    "invalid_n50_m300_bad5": {
+		"source": "examples/invalid_n50_m300_bad5.json",
+		"coloring": "examples/invalid_n50_m300_bad5_coloring.json"
+    }
+  },
+  "sessions": {
+    "n50_m300_bad5": {
+      "graph": "invalid_n50_m300_bad5",
+      "max_rounds": 5,
+	  "seed": 12,
+    "sessions": 100
+    }
+  }
+}

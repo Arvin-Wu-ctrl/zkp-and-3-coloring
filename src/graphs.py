@@ -61,6 +61,20 @@ def load_graph(filepath):
     return load_graph_from_data(data)
 
 
+def load_coloring(filepath):
+    path = Path(filepath)
+
+    with path.open("r", encoding="utf-8") as graph_file:
+        data = json.load(graph_file)
+
+    coloring = [0] * len(data["colors"])
+    for node_str, color in data["colors"].items():
+        node = int(node_str)
+        coloring[node] = int(color)
+
+    return coloring
+
+
 def make_triangle():
     graph = nx.Graph()
     graph.add_nodes_from([0, 1, 2])
@@ -210,6 +224,12 @@ def draw_colored_graph(
         plt.show()
     return figure
 
+
+def load_colored_graph(graph_path, color_path):
+    graph = load_graph(graph_path)
+    coloring = load_coloring(color_path)
+
+    return witness_graph(graph, coloring)
 
 def _validate_count(name, value):
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
