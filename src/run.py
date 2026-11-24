@@ -3,16 +3,15 @@ import typing
 import random
 from pathlib import Path
 from collections import namedtuple
+from sys import argv
 
 from src.session import run_session
 from src.graphs import (
     color_separated,
     generate_invalid_graph,
 	generate_valid_graph,
-    Graph,
     load_graph,
     number_of_bad_edges,
-    save_graph_example,
     witness_graph,
 )
 
@@ -81,7 +80,7 @@ def _load_graphs(graph_data: dict, output_path: Path
             report["source"] = config["source"]
             report["coloring"] = config["coloring"]
             report["nodes"] = witness.number_of_nodes()
-            report["edges"] = witness.number_of_nodes()
+            report["edges"] = witness.number_of_edges()
             report["bad_edges"] = number_of_bad_edges(witness)
 
         else:
@@ -160,7 +159,7 @@ def _save_report(output_path, report):
 
 
 def _analyze_sessions(report):
-    """include empirical acceptance, theoretical acceptance, better with a confidence interval"""
+    """include empirical acceptance and theoretical acceptance"""
     accepted_count = {graph_name: 0 for graph_name in report["graphs"]}
     total_count = {graph_name: 0 for graph_name in report["graphs"]}
 
@@ -207,5 +206,4 @@ def _get_session_parameters(config: dict, graphs: dict) -> list[SessionParameter
 
 
 if __name__ == "__main__":
-    from sys import argv
     main()

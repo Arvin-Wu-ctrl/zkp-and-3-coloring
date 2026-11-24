@@ -1,0 +1,19 @@
+{
+  "output": "tests/test.json",
+  "graphs": {
+    "honest": {
+      "nodes": 20,
+      "edges": 100,
+      "bad_edges": 0,
+      "seed": 12
+    }
+  },
+  "sessions": {
+    "honest": {
+      "graph": "honest",
+      "max_rounds": 10,
+	  "seed": 12,
+    "sessions": 10
+    }
+  }
+}

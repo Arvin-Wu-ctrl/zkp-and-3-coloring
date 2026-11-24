@@ -1,0 +1,19 @@
+{
+  "output": "tests/test.json",
+  "graphs": {
+    "corrupted": {
+      "nodes": 20,
+      "edges": 100,
+      "bad_edges": 2,
+      "seed": 12
+    }
+  },
+  "sessions": {
+    "corrupted": {
+      "graph": "corrupted",
+      "max_rounds": 10,
+	  "seed": 12,
+    "sessions": 10
+    }
+  }
+}

@@ -223,3 +223,6 @@ __marimo__/
 
 # Experiment results
 *-report.json
+
+# test output
+tests/test.json
